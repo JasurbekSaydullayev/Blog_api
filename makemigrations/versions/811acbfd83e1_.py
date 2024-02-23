@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 9a662da46c7e
+Revision ID: 811acbfd83e1
 Revises: 
-Create Date: 2024-02-23 14:20:55.532836
+Create Date: 2024-02-23 15:35:17.627110
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '9a662da46c7e'
+revision: str = '811acbfd83e1'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -25,8 +25,12 @@ def upgrade() -> None:
     sa.Column('username', sa.String(), nullable=True),
     sa.Column('first_name', sa.String(), nullable=True),
     sa.Column('last_name', sa.String(), nullable=True),
+    sa.Column('email', sa.String(), nullable=True),
     sa.Column('password', sa.String(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=True),
+    sa.Column('updated_at', sa.DateTime(), nullable=True),
     sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('email'),
     sa.UniqueConstraint('username')
     )
     op.create_table('blogs',
@@ -42,13 +46,13 @@ def upgrade() -> None:
     )
     op.create_table('comments',
     sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('user_name', sa.String(), nullable=True),
+    sa.Column('username', sa.String(), nullable=True),
     sa.Column('blog_id', sa.Integer(), nullable=True),
     sa.Column('content', sa.String(), nullable=True),
     sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.Column('updated_at', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['blog_id'], ['blogs.id'], ),
-    sa.ForeignKeyConstraint(['user_name'], ['users.username'], ),
+    sa.ForeignKeyConstraint(['username'], ['users.username'], ),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('tags',

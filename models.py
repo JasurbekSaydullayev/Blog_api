@@ -1,4 +1,4 @@
-from datetime import datetime
+import datetime
 
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, DateTime
@@ -14,8 +14,10 @@ class User(Base):
     username = Column(String, unique=True)
     first_name = Column(String)
     last_name = Column(String)
-    email = Column(String)
+    email = Column(String, unique=True)
     password = Column(String)
+    created_at = Column(DateTime, default=datetime.datetime.now)
+    updated_at = Column(DateTime, default=datetime.datetime.now)
 
 
 class Blog(Base):
@@ -24,8 +26,8 @@ class Blog(Base):
     title = Column(String)
     description = Column(String)
     owner_name = Column(String, ForeignKey('users.username'))
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.datetime.now)
+    updated_at = Column(DateTime, default=datetime.datetime.now)
     views = Column(Integer, default=0)
 
 
@@ -42,5 +44,5 @@ class Comment(Base):
     username = Column(String, ForeignKey('users.username'))
     blog_id = Column(Integer, ForeignKey('blogs.id'))
     content = Column(String)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.time)
+    updated_at = Column(DateTime, default=datetime.time)

@@ -39,7 +39,7 @@ class Tag(Base):
 class Comment(Base):
     __tablename__ = 'comments'
     id = Column(Integer, primary_key=True)
-    user_name = Column(String, ForeignKey('users.username'))
+    username = Column(String, ForeignKey('users.username'))
     blog_id = Column(Integer, ForeignKey('blogs.id'))
     content = Column(String)
     created_at = Column(DateTime, default=datetime.utcnow)

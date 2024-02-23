@@ -2,15 +2,25 @@ import secrets
 
 from typing import Annotated
 
-
-from fastapi import FastAPI, Depends, status, HTTPException
+from sqlalchemy.orm import Session
+from fastapi import FastAPI, Depends, status, HTTPException, Form
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 
 from config import ADMIN_USERNAME, ADMIN_PASSWORD
+import schemas
+from database import SessionLocal
 
 app = FastAPI()
 
 security = HTTPBasic()
+
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 
 def get_current_username(
@@ -36,10 +46,6 @@ def get_current_username(
 
 
 @app.get('/user-create/')
-async def create_user():
-    pass
-
-
-
-
+async def create_user(user: Annotated[schemas.UserCreate, Form()],
+                      db: Session = Depends(get_db)):
 

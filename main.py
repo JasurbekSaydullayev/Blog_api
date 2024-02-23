@@ -7,7 +7,7 @@ from fastapi.security import HTTPBasic, HTTPBasicCredentials
 
 import schemas
 from config import ADMIN_USERNAME, ADMIN_PASSWORD
-from services import _create_user, _get_users, _get_user, _update_user, _change_password
+from services import _create_user, _get_users, _get_user, _update_user, _change_password, _delete_user
 from database import SessionLocal
 from schemas import UserCreate, UserUpdate, UserBase, UserView, UserChangePassword
 
@@ -77,5 +77,14 @@ def update_user(username: str,
 @app.put("/user/{username}/password-change")
 def change_password(username: str,
                     passwords: schemas.UserChangePassword,
+                    q: Annotated[str, Depends(get_current_username)],
                     db: Session = Depends(get_db)):
     return _change_password(db=db, username=username, passwords=passwords)
+
+
+@app.delete('/user-delete/{username}')
+def delete_user(username: str,
+                q: Annotated[str, Depends(get_current_username)],
+                password: str = Form(...),
+                db: Session = Depends(get_db), ):
+    return _delete_user(db=db, username=username, password=password)

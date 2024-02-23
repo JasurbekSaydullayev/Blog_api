@@ -1,14 +1,13 @@
-from typing import List, Optional
-
+from typing import List
 from datetime import datetime
 
-from pydantic import BaseModel, constr
+from pydantic import BaseModel, EmailStr
 
 
 class UserBase(BaseModel):
     first_name: str
     last_name: str
-    email: str
+    email: EmailStr
 
 
 class UserView(UserBase):
@@ -24,6 +23,12 @@ class UserCreate(UserBase):
 
 class UserUpdate(UserBase):
     pass
+
+
+class UserChangePassword(BaseModel):
+    old_password: str
+    new_password: str
+    confirm_password: str
 
 
 class BlogBase(BaseModel):

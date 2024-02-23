@@ -5,10 +5,11 @@ from sqlalchemy.orm import Session
 from fastapi import FastAPI, Depends, status, HTTPException, Form
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 
+import schemas
 from config import ADMIN_USERNAME, ADMIN_PASSWORD
-from services import _create_user, _get_users, _get_user, _update_user
+from services import _create_user, _get_users, _get_user, _update_user, _change_password
 from database import SessionLocal
-from schemas import UserCreate, UserUpdate, UserBase, UserView
+from schemas import UserCreate, UserUpdate, UserBase, UserView, UserChangePassword
 
 app = FastAPI()
 
@@ -66,8 +67,15 @@ def create_user(q: Annotated[str, Depends(get_current_username)],
 
 
 @app.put('/user-update/{username}', response_model=UserView)
-async def update_user(username: str,
-                      q: Annotated[str, Depends(get_current_username)],
-                      user: UserUpdate,
-                      db: Session = Depends(get_db)):
-    return await _update_user(db=db, username=username, user=user)
+def update_user(username: str,
+                q: Annotated[str, Depends(get_current_username)],
+                user: UserUpdate,
+                db: Session = Depends(get_db)):
+    return _update_user(db=db, username=username, user=user)
+
+
+@app.put("/user/{username}/password-change")
+def change_password(username: str,
+                    passwords: schemas.UserChangePassword,
+                    db: Session = Depends(get_db)):
+    return _change_password(db=db, username=username, passwords=passwords)

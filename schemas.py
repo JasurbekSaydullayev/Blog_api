@@ -8,6 +8,7 @@ class UserBase(BaseModel):
     first_name: str
     last_name: str
     email: EmailStr
+    phone_number: str
 
 
 class UserView(UserBase):
@@ -71,4 +72,3 @@ class CommentView(CommentBase):
     id: int
     created_at: str
     updated_at: str
-

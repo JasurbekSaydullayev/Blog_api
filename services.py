@@ -3,6 +3,7 @@ from fastapi import HTTPException
 
 from sqlalchemy.orm import Session
 
+import schemas
 from schemas import UserCreate, UserUpdate, UserBase, UserChangePassword
 from models import User, Blog, Comment, Tag
 from validators import check_strong_password, check_phone_number
@@ -133,6 +134,10 @@ def _get_blogs(db, skip, limit):
         raise HTTPException(status_code=404, detail="Blogs do not found")
     temp = []
     for blog in blogs:
+        blog.views += 1
+        db.merge(blog)
+        db.commit()
+        db.refresh(blog)
         qwe = blog.get_dict()
         tags_ = db.query(Tag).filter(Tag.blog_id == blog.id).all()
         qwe['tags'] = [tag.name for tag in tags_]
@@ -147,7 +152,37 @@ def _get_blog(db, blog_id):
     blog.views += 1
     db.merge(blog)
     db.commit()
+    db.refresh(blog)
     temp = blog.get_dict()
     tags = db.query(Tag).filter(Tag.blog_id == blog.id).all()
+    temp['tags'] = [tag.name for tag in tags]
+    return temp
+
+
+def _update_blog(db, blog_id, username, password,
+                 title, description, tags):
+    user = db.query(User).filter(User.username == username).first()
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
+    if not verify_password(password, user.password):
+        raise HTTPException(status_code=401, detail="Password is incorrect")
+    blog_ = db.query(Blog).filter(Blog.id == blog_id).first()
+    if not blog_ or blog_.owner_name != username:
+        raise HTTPException(status_code=401, detail="You are not allowed to edit this blog")
+    blog_.title = title
+    blog_.description = description
+    db.merge(blog_)
+    db.commit()
+    delete_tags = db.query(Tag).filter(Tag.blog_id == blog_id).all()
+    for tag in delete_tags:
+        db.delete(tag)
+        db.commit()
+    tags = tags[0].split(",")
+    for tag in tags:
+        tag_ = Tag(name=tag, blog_id=blog_.id)
+        db.add(tag_)
+        db.commit()
+    temp = blog_.get_dict()
+    tags = db.query(Tag).filter(Tag.blog_id == blog_.id).all()
     temp['tags'] = [tag.name for tag in tags]
     return temp

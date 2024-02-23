@@ -35,19 +35,20 @@ class UserChangePassword(BaseModel):
 class BlogBase(BaseModel):
     title: str
     description: str
-    owner_name: str
-    tags: List[str] = None
 
 
 class BlogView(BlogBase):
+    tags: List[str] = None
     id: int
+    owner_name: str
     created_at: datetime
     updated_at: datetime
     views: int
 
 
 class BlogCreate(BlogBase):
-    pass
+    tags: List[str] = None
+    owner_name: str
 
 
 class BlogUpdate(BlogBase):

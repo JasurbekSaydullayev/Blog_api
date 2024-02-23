@@ -131,4 +131,23 @@ def _get_blogs(db, skip, limit):
     blogs = db.query(Blog).offset(skip).limit(limit).all()
     if not blogs:
         raise HTTPException(status_code=404, detail="Blogs do not found")
-    return blogs
+    temp = []
+    for blog in blogs:
+        qwe = blog.get_dict()
+        tags_ = db.query(Tag).filter(Tag.blog_id == blog.id).all()
+        qwe['tags'] = [tag.name for tag in tags_]
+        temp.append(qwe)
+    return temp
+
+
+def _get_blog(db, blog_id):
+    blog = db.query(Blog).filter(Blog.id == blog_id).first()
+    if not blog:
+        raise HTTPException(status_code=404, detail="Blog not found")
+    blog.views += 1
+    db.merge(blog)
+    db.commit()
+    temp = blog.get_dict()
+    tags = db.query(Tag).filter(Tag.blog_id == blog.id).all()
+    temp['tags'] = [tag.name for tag in tags]
+    return temp

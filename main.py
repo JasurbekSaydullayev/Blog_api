@@ -8,7 +8,7 @@ from fastapi.security import HTTPBasic, HTTPBasicCredentials
 import schemas
 from config import ADMIN_USERNAME, ADMIN_PASSWORD
 from services import _create_user, _get_users, _get_user, _update_user, _change_password, _delete_user, _create_blog, \
-    _get_blogs
+    _get_blogs, _get_blog
 from database import SessionLocal
 from schemas import UserCreate, UserUpdate, UserBase, UserView, UserChangePassword
 
@@ -104,3 +104,17 @@ def get_blogs(db: Session = Depends(get_db),
               skip: int = 0,
               limit: int = 10):
     return _get_blogs(db, skip, limit)
+
+
+@app.get('/blog/{blog_id}', response_model=schemas.BlogView)
+def get_blog(blog_id: int,
+             db: Session = Depends(get_db)):
+    return _get_blog(db, blog_id)
+
+
+
+
+
+
+
+

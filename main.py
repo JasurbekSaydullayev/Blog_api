@@ -48,27 +48,27 @@ def get_current_username(
 
 
 # USER
-@app.get('/users/', response_model=List[UserView])
+@app.get('/users/', response_model=List[UserView], tags=["Users"])
 def get_users(q: Annotated[str, Depends(get_current_username)],
               db: Session = Depends(get_db), skip: int = 0, limit: int = 10):
     return _get_users(db, skip, limit)
 
 
-@app.get('/user/{username}', response_model=UserView)
+@app.get('/user/{username}', response_model=UserView, tags=["Users"])
 def get_user(username: str,
              q: Annotated[str, Depends(get_current_username)],
              db: Session = Depends(get_db)):
     return _get_user(db, username)
 
 
-@app.post('/user-create/', response_model=UserBase)
+@app.post('/user-create/', response_model=UserBase, tags=["Users"])
 def create_user(q: Annotated[str, Depends(get_current_username)],
                 user: UserCreate,
                 db: Session = Depends(get_db)):
     return _create_user(db=db, user=user)
 
 
-@app.put('/user-update/{username}', response_model=UserView)
+@app.put('/user-update/{username}', response_model=UserView, tags=["Users"])
 def update_user(username: str,
                 q: Annotated[str, Depends(get_current_username)],
                 user: UserUpdate,
@@ -76,7 +76,7 @@ def update_user(username: str,
     return _update_user(db=db, username=username, user=user)
 
 
-@app.put("/user/{username}/password-change")
+@app.put("/user/{username}/password-change", tags=["Users"])
 def change_password(username: str,
                     passwords: schemas.UserChangePassword,
                     q: Annotated[str, Depends(get_current_username)],
@@ -84,7 +84,7 @@ def change_password(username: str,
     return _change_password(db=db, username=username, passwords=passwords)
 
 
-@app.delete('/user-delete/{username}')
+@app.delete('/user-delete/{username}', tags=["Users"])
 def delete_user(username: str,
                 q: Annotated[str, Depends(get_current_username)],
                 password: str = Form(...),
@@ -93,26 +93,26 @@ def delete_user(username: str,
 
 
 # BLOG
-@app.post('/blog-create/', response_model=schemas.BlogView)
+@app.post('/blog-create/', response_model=schemas.BlogView, tags=["Blogs"])
 def create_blog(blog: schemas.BlogCreate,
                 db: Session = Depends(get_db)):
     return _create_blog(db, blog)
 
 
-@app.get('/blogs-list-view', response_model=list[schemas.BlogView])
+@app.get('/blogs-list-view', response_model=list[schemas.BlogView], tags=["Blogs"])
 def get_blogs(db: Session = Depends(get_db),
               skip: int = 0,
               limit: int = 10):
     return _get_blogs(db, skip, limit)
 
 
-@app.get('/blog/{blog_id}', response_model=schemas.BlogView)
+@app.get('/blog/{blog_id}', response_model=schemas.BlogView, tags=["Blogs"])
 def get_blog(blog_id: int,
              db: Session = Depends(get_db)):
     return _get_blog(db, blog_id)
 
 
-@app.put('/blog/{blog_id}', response_model=schemas.BlogView)
+@app.put('/blog-update/{blog_id}', response_model=schemas.BlogView, tags=["Blogs"])
 def update_blog(blog_id: int,
                 username: str = Form(...),
                 password: str = Form(...),

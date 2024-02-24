@@ -50,7 +50,7 @@ class Tag(Base):
     __tablename__ = 'tags'
     id = Column(Integer, primary_key=True)
     name = Column(String)
-    blog_id = Column(Integer, ForeignKey('blogs.id'))
+    blog_id = Column(Integer, ForeignKey('blogs.id', ondelete="CASCADE"))
 
     def __str__(self):
         return self.name

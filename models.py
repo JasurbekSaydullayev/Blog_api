@@ -62,8 +62,8 @@ class Comment(Base):
     username = Column(String, ForeignKey('users.username'))
     blog_id = Column(Integer, ForeignKey('blogs.id'))
     content = Column(String)
-    created_at = Column(DateTime, default=datetime.time)
-    updated_at = Column(DateTime, default=datetime.time)
+    created_at = Column(DateTime, default=datetime.datetime.now)
+    updated_at = Column(DateTime, default=datetime.datetime.now)
 
     def __str__(self):
         return self.content

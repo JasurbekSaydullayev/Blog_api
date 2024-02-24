@@ -4,7 +4,7 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 import schemas
-from schemas import UserCreate, UserUpdate, UserBase, UserChangePassword
+from schemas import UserCreate, UserBase, UserChangePassword
 from models import User, Blog, Comment, Tag
 from validators import check_strong_password, check_phone_number
 
@@ -59,7 +59,7 @@ def _get_user(db: Session,
     raise HTTPException(status_code=404, detail="User not found")
 
 
-def _update_user(db: Session, username, user: UserUpdate):
+def _update_user(db: Session, username, user: UserBase):
     user_ = db.query(User).filter(User.username == username).first()
     if not user_:
         raise HTTPException(status_code=404, detail="User not found")
@@ -111,20 +111,23 @@ def _delete_user(db, username, password):
 
 
 # CRUD BLOG
-def _create_blog(db, blog):
-    user = db.query(User).filter(User.username == blog.owner_name).first()
+def _create_blog(db, title, description, tags, username, password):
+    user = db.query(User).filter(User.username == username).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    blog_ = Blog(owner_name=blog.owner_name, title=blog.title,
-                 description=blog.description)
+    if not verify_password(password, user.password):
+        raise HTTPException(status_code=400, detail="Password is incorrect")
+    blog_ = Blog(owner_name=username, title=title,
+                 description=description)
     db.add(blog_)
     db.commit()
     db.refresh(blog_)
-    for tag in blog.tags:
+    tags = tags[0].split(",")
+    for tag in tags:
         db.add(Tag(name=tag, blog_id=blog_.id))
         db.commit()
     temp = blog_.get_dict()
-    temp['tags'] = [tag for tag in blog.tags]
+    temp['tags'] = [tag for tag in tags]
     return temp
 
 
@@ -186,3 +189,89 @@ def _update_blog(db, blog_id, username, password,
     tags = db.query(Tag).filter(Tag.blog_id == blog_.id).all()
     temp['tags'] = [tag.name for tag in tags]
     return temp
+
+
+def _delete_blog(db, blog_id, username, password):
+    user = db.query(User).filter(User.username == username).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if not verify_password(password, user.password):
+        raise HTTPException(status_code=403, detail="Incorrect password")
+    blog = db.query(Blog).filter(Blog.id == blog_id).first()
+    if not blog or not blog.owner_name == username:
+        raise HTTPException(status_code=404, detail="Blog not found or you don't have permission to edit this blog")
+    delete_tags = db.query(Tag).filter(Tag.blog_id == blog_id).all()
+    for tag in delete_tags:
+        db.delete(tag)
+        db.commit()
+    db.delete(blog)
+    db.commit()
+    return "Blog deleted successfully"
+
+
+def _create_comment(db, blog_id, username, password, content):
+    user = db.query(User).filter(User.username == username).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if not verify_password(password, user.password):
+        raise HTTPException(status_code=404, detail="Incorrect password")
+    blog = db.query(Blog).filter(Blog.id == blog_id).first()
+    if not blog:
+        raise HTTPException(status_code=404, detail="Blog not found")
+    comment = Comment(content=content, username=username, blog_id=blog_id)
+    db.add(comment)
+    db.commit()
+    return comment
+
+
+def _get_comments_by_blog(db, skip, limit, blog_id):
+    blog = db.query(Blog).filter(Blog.id == blog_id).first()
+    if not blog:
+        raise HTTPException(status_code=404, detail="Blog not found")
+    comments = db.query(Comment).filter(Comment.blog_id == blog_id).offset(skip).limit(limit).all()
+    if not comments:
+        raise HTTPException(status_code=404, detail="Comments not found")
+    return comments
+
+
+def _get_comments_by_username(db, username, skip, limit):
+    user = db.query(User).filter(User.username == username).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    comments = db.query(Comment).filter(Comment.username == username).offset(skip).limit(limit).all()
+    if not comments:
+        raise HTTPException(status_code=404, detail="Comments do not found")
+    return comments
+
+
+def _comment_update(db, comment_id, username, password, content):
+    user = db.query(User).filter(User.username == username).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if not verify_password(password, user.password):
+        raise HTTPException(status_code=401, detail="Incorrect password")
+    comment = db.query(Comment).filter(Comment.id == comment_id).first()
+    if not comment:
+        raise HTTPException(status_code=404, detail="Comment not found")
+    if comment.username != username:
+        raise HTTPException(status_code=403, detail="You don't have permission to edit this comment")
+    comment.content = content
+    db.merge(comment)
+    db.commit()
+    db.refresh(comment)
+    return comment
+
+
+def _comment_delete(db, comment_id, username, password):
+    user = db.query(User).filter(User.username == username).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if not verify_password(password, user.password):
+        raise HTTPException(status_code=401, detail="Incorrect password")
+    comment = db.query(Comment).filter(Comment.id == comment_id).first()
+    if not comment or comment.username != username:
+        raise HTTPException(status_code=404,
+                            detail="Comment not found or You don't have permission to delete this comment")
+    db.delete(comment)
+    db.commit()
+    return "Comment deleted successfully"

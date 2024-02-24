@@ -4,6 +4,7 @@ from datetime import datetime
 from pydantic import BaseModel, EmailStr
 
 
+# USER
 class UserBase(BaseModel):
     first_name: str
     last_name: str
@@ -22,16 +23,13 @@ class UserCreate(UserBase):
     password: str
 
 
-class UserUpdate(UserBase):
-    pass
-
-
 class UserChangePassword(BaseModel):
     old_password: str
     new_password: str
     confirm_password: str
 
 
+# BLOG
 class BlogBase(BaseModel):
     title: str
     description: str
@@ -46,30 +44,14 @@ class BlogView(BlogBase):
     views: int
 
 
-class BlogCreate(BlogBase):
-    tags: List[str] = None
-    owner_name: str
-
-
-class BlogUpdate(BlogBase):
-    pass
-
-
+# COMMENT
 class CommentBase(BaseModel):
+    id: int
     username: str
     blog_id: int
     content: str
 
 
-class CommentCreate(CommentBase):
-    pass
-
-
-class CommentUpdate(CommentBase):
-    pass
-
-
 class CommentView(CommentBase):
-    id: int
-    created_at: str
-    updated_at: str
+    created_at: datetime
+    updated_at: datetime

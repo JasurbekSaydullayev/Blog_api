@@ -49,11 +49,87 @@ async def comments_actions(message: types.Message):
     await message.answer("Harakatni tanlang", reply_markup=COMMENTLAR)
 
 
+@admin_router.message(F.text == "Foydalanuvchilarni ko'rish")
+async def view_users(message: types.Message):
+    db = SessionLocal()
+    users = db.query(User).all()
+    await message.answer("Foydalnuvchilar:", reply_markup=FOYDALANUVCHILAR)
+    for user in users:
+        blogs = db.query(Blog).filter(Blog.owner_name == user.username).all()
+        await message.answer(f"Username: {user.username}\n"
+                             f"Full name: {user.first_name} {user.last_name}\n"
+                             f"Bloglar soni: {len(blogs)}\n"
+                             f"Ro'yhatdan o'tgan vaqti: {str(user.created_at)[:-7]}")
+
+
+@admin_router.message(F.text == "Bloglarni ko'rish")
+async def blogs(message: types.Message):
+    db = SessionLocal()
+    blogs = db.query(Blog).all()
+    await message.answer("Bloglar: ", reply_markup=BLOGLAR)
+    for blog in blogs:
+        tags = db.query(Tag).filter(Tag.blog_id == blog.id).all()
+        tags = [tag.name for tag in tags]
+        await message.answer(f"Blog ID si: {blog.id}\n\n"
+                             f"Nomi: {blog.title}\n\n"
+                             f"{blog.description}\n\n"
+                             f"Taglar: {', '.join(tags)}\n\n"
+                             f"Blog egasi: {blog.owner_name}\n\n"
+                             f"Yaratilgan vaqti: {str(blog.created_at)[:-7]}\n\n")
+
+
+# COMMENT DELETE BY BLOG FSM START
+class CommentDeleteByBlog(StatesGroup):
+    blog_id = State()
+    confirmation = State()
+
+
+@admin_router.message(StateFilter(None), F.text == "Blogning hamma commentlarini o'chirish")
+async def get_blog(message: types.Message, state: FSMContext):
+    await message.answer("Blogning IDsini kiriting",
+                         reply_markup=types.ReplyKeyboardRemove())
+    await state.set_state(CommentDeleteByBlog.blog_id)
+
+
+@admin_router.message(CommentDeleteByBlog.blog_id, F.text)
+async def delete_comments(message: types.Message, state: FSMContext):
+    db = SessionLocal()
+    blog = db.query(Blog).filter(Blog.id == message.text).first()
+    if not blog:
+        await message.answer("Blog topilmadi. "
+                             "Boshqattan kiriting")
+        return
+    comments = db.query(Comment).filter(Comment.blog_id == message.text).all()
+    if not comments:
+        await message.answer(f"{blog.id} IDli blogning commentlari topilmadi",
+                             reply_markup=COMMENTLAR)
+        await state.clear()
+        return
+    await state.update_data(blog_id=blog.id)
+    await state.set_state(CommentDeleteByBlog.confirmation)
+    await message.answer(f"{blog.id} IDli blogning {len(comments)} ta "
+                         f"commentini o'chirishni tasdiqlaysizmi",
+                         reply_markup=TASDIQLASH)
+
+
+@admin_router.message(CommentDeleteByBlog.confirmation, F.text == "Xa ✅")
+async def delete_comments_confirmation(message: types.Message, state: FSMContext):
+    db = SessionLocal()
+    data = await state.get_data()
+    comments = db.query(Comment).filter(Comment.blog_id == data['blog_id']).all()
+    for comment in comments:
+        db.delete(comment)
+        db.commit()
+    await state.clear()
+    await message.answer("O'chirildi ✅", reply_markup=COMMENTLAR)
+# COMMENT DELETE BY BLOG FSM FINISH
+
+
+# COMMENT VIEW BY BLOG FSM START
 class CommentViewByBlog(StatesGroup):
     blog_id = State()
 
 
-# COMMENT VIEW BY BLOG FSM START
 @admin_router.message(StateFilter(None), F.text == "Blog commentlarini ko'rish")
 async def comment_view_by_blog(message: types.Message, state: FSMContext):
     await message.answer("Blog IDsini kiriting", reply_markup=types.ReplyKeyboardRemove())
@@ -115,35 +191,6 @@ async def get_comments(message: types.Message, state: FSMContext):
                              f"Yozilgan vaqti: {str(comment.created_at)[:-7]}")
     await state.clear()
 # COMMENT VIEW BY USER FSM FINISH
-
-
-@admin_router.message(F.text == "Bloglarni ko'rish")
-async def blogs(message: types.Message):
-    db = SessionLocal()
-    blogs = db.query(Blog).all()
-    await message.answer("Bloglar: ", reply_markup=BLOGLAR)
-    for blog in blogs:
-        tags = db.query(Tag).filter(Tag.blog_id == blog.id).all()
-        tags = [tag.name for tag in tags]
-        await message.answer(f"Blog ID si: {blog.id}\n\n"
-                             f"Nomi: {blog.title}\n\n"
-                             f"{blog.description}\n\n"
-                             f"Taglar: {', '.join(tags)}\n\n"
-                             f"Blog egasi: {blog.owner_name}\n\n"
-                             f"Yaratilgan vaqti: {str(blog.created_at)[:-7]}\n\n")
-
-
-@admin_router.message(F.text == "Foydalanuvchilarni ko'rish")
-async def view_users(message: types.Message):
-    db = SessionLocal()
-    users = db.query(User).all()
-    await message.answer("Foydalnuvchilar:", reply_markup=FOYDALANUVCHILAR)
-    for user in users:
-        blogs = db.query(Blog).filter(Blog.owner_name == user.username).all()
-        await message.answer(f"Username: {user.username}\n"
-                             f"Full name: {user.first_name} {user.last_name}\n"
-                             f"Bloglar soni: {len(blogs)}\n"
-                             f"Ro'yhatdan o'tgan vaqti: {str(user.created_at)[:-7]}")
 
 
 # BLOG VIEW FSM START

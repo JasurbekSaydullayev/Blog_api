@@ -1,7 +1,7 @@
 import logging
 import asyncio
 
-from aiogram import Bot, Dispatcher, types
+from aiogram import Bot, Dispatcher
 
 from handlers.user_group import user_group_router
 from handlers.admin_private import admin_router

@@ -74,7 +74,7 @@ COMMENTLAR = get_keyboard(
     "Bitta comment o'chirish",
     "Orqaga",
     placeholder="Harakatni tanlang",
-    sizes=(2, 2, 1),
+    sizes=(2, 2, 2),
 )
 
 TASDIQLASH = get_keyboard(

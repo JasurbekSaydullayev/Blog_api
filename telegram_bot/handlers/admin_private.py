@@ -13,6 +13,7 @@ admin_router = Router()
 admin_router.message.filter(ChatTypeFilter(["private"]), IsAdmin())
 
 
+@admin_router.message(StateFilter(None), F.text == "Orqaga")
 @admin_router.message(Command("admin"))
 async def admin_features(message: types.Message, state: FSMContext):
     await message.answer("Nima qilishni xoxlaysiz?", reply_markup=ADMIN_KB)
@@ -21,17 +22,12 @@ async def admin_features(message: types.Message, state: FSMContext):
 
 @admin_router.message(StateFilter("*"), Command('bekorqilish'))
 @admin_router.message(StateFilter('*'), F.text == "Bekor qilish")
-async def cancel_handler(message: types.Message, state: FSMContext) -> None:
+async def cancel_handler(message: types.Message, state: FSMContext):
     current_state = await state.get_state()
     if current_state is None:
         return
     await state.clear()
     await message.answer("Bekor qilindi", reply_markup=ADMIN_KB)
-
-
-@admin_router.message(StateFilter(None), F.text == "Orqaga")
-async def admin_orqaga(message: types.Message):
-    await message.answer("Nima qilishni xoxlaysiz?", reply_markup=ADMIN_KB)
 
 
 @admin_router.message(F.text == "Foydalanuvchilar")
@@ -91,8 +87,29 @@ async def get_blog(message: types.Message, state: FSMContext):
     await state.set_state(CommentDeleteByBlog.blog_id)
 
 
+@admin_router.message(StateFilter(CommentDeleteByBlog), Command("orqaga"))
+@admin_router.message(StateFilter(CommentDeleteByBlog), F.text == "Orqaga")
+async def back_step_user(message: types.Message, state: FSMContext) -> None:
+    current_state = await state.get_state()
+
+    if current_state == CommentDeleteByBlog.blog_id:
+        await message.answer("Orqaga yo'l yo'q. Yoki beror qiling yoki blog_id kiriting")
+        return
+
+    previous = None
+    for step in CommentDeleteByBlog.__all_states__:
+        if step.state == current_state:
+            await state.set_state(previous)
+            await message.answer(f"Orqaga qaytarildi \n{CommentDeleteByBlog.texts[previous.state]}")
+            return
+        previous = step
+
+
 @admin_router.message(CommentDeleteByBlog.blog_id, F.text)
 async def delete_comments(message: types.Message, state: FSMContext):
+    if not message.text.isdigit():
+        await message.answer("Noto'g'ri tip kiritildi. Boshqattan kiriting")
+        return
     db = SessionLocal()
     blog = db.query(Blog).filter(Blog.id == message.text).first()
     if not blog:
@@ -125,6 +142,71 @@ async def delete_comments_confirmation(message: types.Message, state: FSMContext
 # COMMENT DELETE BY BLOG FSM FINISH
 
 
+# COMMENT DELETE BY USER FSM START
+class CommentDeleteByUser(StatesGroup):
+    username = State()
+    confirmation = State()
+
+
+@admin_router.message(StateFilter(None), F.text == "Userning hamma commentlarini o'chirish")
+async def delete_comments_by_user(message: types.Message, state: FSMContext):
+    await message.answer("Bloglari o'chirilishi kerak bo'lgan userning "
+                         "usernameni kiriting",
+                         reply_markup=types.ReplyKeyboardRemove())
+    await state.set_state(CommentDeleteByUser.username)
+
+
+@admin_router.message(StateFilter(CommentDeleteByUser), Command("orqaga"))
+@admin_router.message(StateFilter(CommentDeleteByUser), F.text == "Orqaga")
+async def back_step_user(message: types.Message, state: FSMContext) -> None:
+    current_state = await state.get_state()
+
+    if current_state == CommentDeleteByUser.username:
+        await message.answer("Orqaga yo'l yo'q. Yoki beror qiling yoki username kiriting")
+        return
+
+    previous = None
+    for step in CommentDeleteByUser.__all_states__:
+        if step.state == current_state:
+            await state.set_state(previous)
+            await message.answer(f"Orqaga qaytarildi \n{CommentDeleteByUser.texts[previous.state]}")
+            return
+        previous = step
+
+
+@admin_router.message(CommentDeleteByUser.username, F.text)
+async def delete_comments_user(message: types.Message, state: FSMContext):
+    db = SessionLocal()
+    user = db.query(User).filter(User.username == message.text).first()
+    if not user:
+        await message.answer("Bunday usernamega ega foydalanuvchi topilmadi. "
+                             "Boshqattan kiriting")
+        return
+    comments = db.query(Comment).filter(Comment.username == message.text).all()
+    if not comments:
+        await message.answer(f"'{user.username}' usernameli foydalanuvchining commentlari topilmadi")
+        await state.clear()
+        return
+    await state.update_data(username=message.text)
+    await message.answer(f"'{user.username}' usernameli foydalanuvchining "
+                         f"{len(comments)} ta commentini o'chirishdni tasdiqlaysizmi?",
+                         reply_markup=TASDIQLASH)
+    await state.set_state(CommentDeleteByUser.confirmation)
+
+
+@admin_router.message(CommentDeleteByUser.confirmation, F.text == "Xa ✅")
+async def delete_comments(message: types.Message, state: FSMContext):
+    db = SessionLocal()
+    data = await state.get_data()
+    comments = db.query(Comment).filter(Comment.username == data['username']).all()
+    for comment in comments:
+        db.delete(comment)
+        db.commit()
+    await message.answer("O'chirildi ✅", reply_markup=COMMENTLAR)
+    await state.clear()
+# COMMENT DELETE BY USER FSM FINISH
+
+
 # COMMENT VIEW BY BLOG FSM START
 class CommentViewByBlog(StatesGroup):
     blog_id = State()
@@ -138,6 +220,9 @@ async def comment_view_by_blog(message: types.Message, state: FSMContext):
 
 @admin_router.message(CommentViewByBlog.blog_id, F.text)
 async def comment_view_by_blog(message: types.Message, state: FSMContext):
+    if not message.text.isdigit():
+        await message.answer("Noto'g'ri tip kiritildi. Boshqattan kiriting")
+        return
     db = SessionLocal()
     blog = db.query(Blog).filter(Blog.id == message.text).first()
     if not blog:
@@ -158,11 +243,11 @@ async def comment_view_by_blog(message: types.Message, state: FSMContext):
 # COMMENT VIEW BY BLOG FSM FINISH
 
 
+# COMMENT VIEW BY USER FSM START
 class CommentViewByUser(StatesGroup):
     username = State()
 
 
-# COMMENT VIEW BY USER FSM START
 @admin_router.message(StateFilter(None), F.text == "User commentlarini ko'rish")
 async def get_user_comments(message: types.Message, state: FSMContext):
     await message.answer("Username kiriting",
@@ -180,7 +265,8 @@ async def get_comments(message: types.Message, state: FSMContext):
         return
     comments = db.query(Comment).filter(Comment.username == message.text).all()
     if not comments:
-        await message.answer("Ushbu foydalanuvchining commentlari topilmadi")
+        await message.answer("Ushbu foydalanuvchining commentlari topilmadi",
+                             reply_markup=COMMENTLAR)
         await state.clear()
         return
     await message.answer(f"'{user.username}' usernamega ega foydalanuvchining commentlari:",
@@ -330,7 +416,7 @@ async def back_step_blog(message: types.Message, state: FSMContext) -> None:
 @admin_router.message(DeleteBlog.blog_id, F.text)
 async def confirmation_to_delete_blog(message: types.Message, state: FSMContext):
     if not message.text.isdigit():
-        await message.answer("Blog IDsi integer tipda kiritiladi. "
+        await message.answer("Blog IDsi musbat integer tipda kiritiladi. "
                              "Iltimos boshqattan kiriting")
         return
     db = SessionLocal()

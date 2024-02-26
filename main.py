@@ -66,6 +66,10 @@ def get_user(username: str,
 def create_user(q: Annotated[str, Depends(get_current_username)],
                 user: UserCreate,
                 db: Session = Depends(get_db)):
+    if user.username == "Orqaga":
+        raise HTTPException(status_code=400,
+                            detail="Orqaga nomli username texnik "
+                            "sabablarga ko'ra yaratish mumkin emas.")
     return _create_user(db=db, user=user)
 
 
@@ -95,7 +99,8 @@ def delete_user(username: str,
 
 # BLOG
 @app.post('/blog-create/', response_model=schemas.BlogView, tags=["Blogs"])
-def create_blog(title: str = Form(...),
+def create_blog(q: Annotated[str, Depends(get_current_username)],
+                title: str = Form(...),
                 description: str = Form(...),
                 tags: List[str] = Form(...),
                 username: str = Form(...),
@@ -105,20 +110,23 @@ def create_blog(title: str = Form(...),
 
 
 @app.get('/blogs-list-view', response_model=list[schemas.BlogView], tags=["Blogs"])
-def get_blogs(db: Session = Depends(get_db),
+def get_blogs(q: Annotated[str, Depends(get_current_username)],
+              db: Session = Depends(get_db),
               skip: int = 0,
               limit: int = 10):
     return _get_blogs(db, skip, limit)
 
 
 @app.get('/blog/{blog_id}', response_model=schemas.BlogView, tags=["Blogs"])
-def get_blog(blog_id: int,
+def get_blog(q: Annotated[str, Depends(get_current_username)],
+             blog_id: int,
              db: Session = Depends(get_db)):
     return _get_blog(db, blog_id)
 
 
 @app.put('/blog-update/{blog_id}', response_model=schemas.BlogView, tags=["Blogs"])
-def update_blog(blog_id: int,
+def update_blog(q: Annotated[str, Depends(get_current_username)],
+                blog_id: int,
                 username: str = Form(...),
                 password: str = Form(...),
                 title: str = Form(...),
@@ -130,7 +138,8 @@ def update_blog(blog_id: int,
 
 
 @app.delete('/blog-delete/{blog_id}', tags=["Blogs"])
-def delete_blog(blog_id: int,
+def delete_blog(q: Annotated[str, Depends(get_current_username)],
+                blog_id: int,
                 username: str = Form(...),
                 password: str = Form(...),
                 db: Session = Depends(get_db)):
@@ -139,7 +148,8 @@ def delete_blog(blog_id: int,
 
 # COMMENT
 @app.post('/comment-create', response_model=schemas.CommentView, tags=["Comments"])
-def create_comment(username: str = Form(...),
+def create_comment(q: Annotated[str, Depends(get_current_username)],
+                   username: str = Form(...),
                    password: str = Form(...),
                    blog_id: int = Form(...),
                    content: str = Form(...),
@@ -148,7 +158,8 @@ def create_comment(username: str = Form(...),
 
 
 @app.get("/comments-blogs/{blog_id}", response_model=list[schemas.CommentView], tags=["Comments"])
-def get_comments_by_blog(blog_id: int,
+def get_comments_by_blog(q: Annotated[str, Depends(get_current_username)],
+                         blog_id: int,
                          skip: int = 0,
                          limit: int = 100,
                          db: Session = Depends(get_db)):
@@ -156,14 +167,17 @@ def get_comments_by_blog(blog_id: int,
 
 
 @app.get("/comments-users/{username}", response_model=list[schemas.CommentView], tags=["Comments"])
-def get_comments_by_username(username: str,
+def get_comments_by_username(q: Annotated[str, Depends(get_current_username)],
+                             username: str,
                              skip: int = 0,
                              limit: int = 10,
                              db: Session = Depends(get_db)):
     return _get_comments_by_username(db, username, skip, limit)
 
+
 @app.put("/comment-update/{comment_id}", response_model=schemas.CommentView, tags=["Comments"])
-def comment_update(comment_id: int,
+def comment_update(q: Annotated[str, Depends(get_current_username)],
+                   comment_id: int,
                    username: str = Form(...),
                    password: str = Form(...),
                    content: str = Form(...),
@@ -172,11 +186,9 @@ def comment_update(comment_id: int,
 
 
 @app.delete("/comment-delete/{comment_id}", tags=["Comments"])
-def comment_delete(comment_id: int,
+def comment_delete(q: Annotated[str, Depends(get_current_username)],
+                   comment_id: int,
                    username: str = Form(...),
                    password: str = Form(...),
                    db: Session = Depends(get_db)):
     return _comment_delete(db, comment_id, username, password)
-
-
-

@@ -80,6 +80,7 @@ COMMENTLAR = get_keyboard(
 TASDIQLASH = get_keyboard(
     "Xa ✅",
     "Bekor qilish",
+    "Orqaga",
     placeholder="Harakatni tanlang",
-    sizes=(2,),
+    sizes=(2,1),
 )
